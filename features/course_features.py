@@ -10,6 +10,15 @@ from db.schema import get_connection
 from config import GRADE_MAP, CLASS_MAP, COURSE_WIN_RATE_AVG
 
 
+def _row_get(row, key, default=None):
+    """sqlite3.Row用の安全なgetヘルパー"""
+    try:
+        val = row[key]
+        return val if val is not None else default
+    except (IndexError, KeyError):
+        return default
+
+
 class CourseFeatureBuilder(BaseFeatureBuilder):
     """コース位置・レース条件・装備から特徴量を生成"""
 
@@ -66,26 +75,26 @@ class CourseFeatureBuilder(BaseFeatureBuilder):
         feats["course_avg_win_rate"] = COURSE_WIN_RATE_AVG.get(course, 0.05)
 
         # 級別
-        racer_class = entry.get("class") or ""
+        racer_class = _row_get(entry, "class", "")
         feats["class_code"] = CLASS_MAP.get(racer_class, 4)
 
         # モーター・ボート
-        feats["motor_2nd_rate"] = entry.get("motor_2nd_rate")
-        feats["boat_2nd_rate"] = entry.get("boat_2nd_rate")
-        feats["exhibition_time"] = entry.get("exhibition_time")
-        feats["start_timing"] = entry.get("start_timing")
-        feats["odds"] = entry.get("odds")
-        feats["popularity"] = entry.get("popularity")
+        feats["motor_2nd_rate"] = _row_get(entry, "motor_2nd_rate")
+        feats["boat_2nd_rate"] = _row_get(entry, "boat_2nd_rate")
+        feats["exhibition_time"] = _row_get(entry, "exhibition_time")
+        feats["start_timing"] = _row_get(entry, "start_timing")
+        feats["odds"] = _row_get(entry, "odds")
+        feats["popularity"] = _row_get(entry, "popularity")
 
         # レース条件
         if race:
             feats["grade_code"] = GRADE_MAP.get(race["grade"], 5) if race["grade"] else 5
-            feats["wind_speed"] = race.get("wind_speed")
-            feats["wave_height"] = race.get("wave_height")
-            feats["is_night"] = race.get("is_night", 0)
+            feats["wind_speed"] = _row_get(race, "wind_speed")
+            feats["wave_height"] = _row_get(race, "wave_height")
+            feats["is_night"] = _row_get(race, "is_night", 0)
 
             # 向かい風判定（1コースに不利）
-            wind_dir = race.get("wind_direction", "")
+            wind_dir = _row_get(race, "wind_direction", "")
             feats["is_headwind"] = 1 if wind_dir in ("向", "北", "北西", "北東") else 0
 
             if race["date"]:

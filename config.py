@@ -20,6 +20,11 @@ X_API_SECRET = os.getenv("X_API_SECRET", "")
 X_ACCESS_TOKEN = os.getenv("X_ACCESS_TOKEN", "")
 X_ACCESS_SECRET = os.getenv("X_ACCESS_SECRET", "")
 
+# ── Supabase ──
+SUPABASE_URL = os.getenv("SUPABASE_URL", "")
+SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY", "")
+SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", "")
+
 # ── スクレイピング ──
 SCRAPE_DELAY = 1.5  # 秒
 BOATRACE_BASE_URL = "https://www.boatrace.jp"

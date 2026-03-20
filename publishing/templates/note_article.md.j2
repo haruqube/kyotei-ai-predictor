@@ -1,0 +1,47 @@
+# AI競艇予想 {{ date_display }} {{ venue_display }}
+
+> AI予測モデル（LightGBM LambdaRank）による競艇予想レポート
+
+---
+
+## 本日の予想サマリー
+
+| 項目 | 内容 |
+|------|------|
+| 対象日 | {{ date_display }} |
+| 開催場 | {{ venue_display }} |
+| 対象レース数 | {{ race_count }}R |
+| 前回的中率 | {{ last_accuracy }} |
+
+---
+
+{% for race in races %}
+## {{ race.venue_name }} {{ race.race_number }}R {{ race.race_name or '' }}
+
+**{{ race.grade or '一般' }} / {{ race.racer_count }}艇**
+{% if race.weather %}天候: {{ race.weather }}{% endif %}{% if race.wind_speed %} / 風速{{ race.wind_speed }}m{% endif %}{% if race.wave_height %} / 波高{{ race.wave_height }}cm{% endif %}
+
+| 印 | コース | 選手名 | 級別 | 全国勝率 | モーター2連率 | 展示T | スコア |
+|----|--------|--------|------|----------|--------------|-------|--------|
+{% for p in race.predictions %}| {{ p.mark }} | {{ p.course }} | {{ p.racer_name }} | {{ p.class or '-' }} | {{ '%.2f'|format(p.national_win_rate) if p.national_win_rate else '-' }} | {{ '%.1f%%'|format(p.motor_2nd_rate) if p.motor_2nd_rate else '-' }} | {{ p.exhibition_time or '-' }} | {{ '%.3f'|format(p.predicted_score) }} |
+{% endfor %}
+{% if race.analysis %}
+{{ race.analysis }}
+{% endif %}
+---
+
+{% endfor %}
+
+## AI予測モデルについて
+
+本予想はLightGBM LambdaRankモデルを使用しています。
+- 学習データ: 過去2年分の全競艇場全レース
+- 特徴量: 選手成績、コース適性、モーター/ボート性能、展示タイムなど37項目
+- 評価指標: NDCG@3
+- 競艇はコース（枠番）が最大のファクター。1コース1着率は全国平均55%
+
+**免責事項:** 本記事はAIによる分析結果であり、舟券購入は自己責任でお願いします。
+
+---
+
+*質問・フィードバックはコメントで！*

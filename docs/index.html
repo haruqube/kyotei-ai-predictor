@@ -1,0 +1,1592 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0c1426">
+<title>競艇AI予想</title>
+<style>
+:root {
+  --bg: #f0f2f5;
+  --card: #ffffff;
+  --text: #1e293b;
+  --sub: #64748b;
+  --muted: #94a3b8;
+  --border: #e2e8f0;
+  --accent: #0369a1;
+  --accent-dark: #075985;
+  --accent-light: #e0f2fe;
+  --surface: #f8fafc;
+  --honmei: #dc2626;
+  --taikou: #0369a1;
+  --tanana: #059669;
+  --renka: #6b7280;
+  --grade-sg: #7c3aed;
+  --grade-g1: #dc2626;
+  --grade-g2: #ea580c;
+  --grade-g3: #059669;
+  --grade-ippan: #6b7280;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);
+  --radius: 12px;
+  --radius-sm: 8px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic UI", "Segoe UI", Meiryo, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100dvh;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+}
+
+.header {
+  background: linear-gradient(135deg, #0c1426 0%, #0c4a6e 100%);
+  color: #fff;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.header h1 { font-size: 17px; font-weight: 800; flex: 1; letter-spacing: 0.5px; }
+.header-sub { font-size: 10px; font-weight: 400; opacity: 0.7; margin-left: 6px; }
+.back-btn {
+  background: rgba(255,255,255,0.15);
+  border: none;
+  color: #fff;
+  font-size: 18px;
+  cursor: pointer;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+.back-btn:active { background: rgba(255,255,255,0.25); }
+.hidden { display: none !important; }
+
+.screen { animation: fadeIn 0.2s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* ── 日付選択画面 ── */
+.date-screen { padding: 16px; }
+
+.recommend-section { margin-bottom: 20px; }
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.section-icon {
+  width: 28px; height: 28px;
+  background: linear-gradient(135deg, #dc2626, #ef4444);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; color: #fff;
+}
+.section-title { font-size: 15px; font-weight: 700; }
+.section-badge {
+  font-size: 10px; font-weight: 700;
+  background: #fef2f2; color: #dc2626;
+  padding: 2px 8px; border-radius: 10px;
+  margin-left: auto;
+}
+
+.rec-card {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 10px;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+.rec-card:active { transform: scale(0.98); box-shadow: var(--shadow-sm); }
+.rec-card::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 4px;
+  background: linear-gradient(180deg, #dc2626, #f97316);
+}
+
+.rec-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.rec-time {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text);
+  min-width: 52px;
+  letter-spacing: -0.5px;
+}
+.rec-venue {
+  font-size: 14px;
+  font-weight: 700;
+  flex: 1;
+}
+.rec-conf {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+.conf-high { background: #fef2f2; color: #dc2626; }
+.conf-very-high { background: #dc2626; color: #fff; }
+
+.rec-courses {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.rec-course-group {
+  display: flex;
+  gap: 3px;
+  align-items: center;
+  background: var(--surface);
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+}
+.rec-course-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--sub);
+  margin-right: 4px;
+}
+/* 競艇コース色 (1白 2黒 3赤 4青 5黄 6緑) */
+.course-circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  font-weight: 800;
+  font-size: 12px;
+}
+.course-1 { background: #fff; color: #333; border: 2px solid #d1d5db; }
+.course-2 { background: #1e293b; color: #fff; }
+.course-3 { background: #dc2626; color: #fff; }
+.course-4 { background: #2563eb; color: #fff; }
+.course-5 { background: #eab308; color: #1e293b; }
+.course-6 { background: #16a34a; color: #fff; }
+
+.rec-plus {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sub);
+}
+.rec-racers {
+  font-size: 11px;
+  color: var(--muted);
+}
+.rec-arrow {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  font-size: 18px;
+}
+
+/* 日付ボタン */
+.date-nav {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.date-btn {
+  flex: 1;
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  min-height: 44px;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+.date-btn.primary {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 2px 4px rgba(3,105,161,0.3);
+}
+.date-btn.primary:active { background: var(--accent-dark); transform: scale(0.97); }
+.date-btn.secondary {
+  background: var(--card);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+}
+.date-btn.secondary:active { background: var(--surface); transform: scale(0.97); }
+
+.date-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.date-picker label { font-size: 13px; color: var(--sub); white-space: nowrap; font-weight: 600; }
+.date-input {
+  flex: 1;
+  padding: 10px 12px;
+  font-size: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  background: var(--card);
+  color: var(--text);
+}
+.date-input:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: var(--accent); }
+.date-go-btn {
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  min-width: 44px;
+  min-height: 44px;
+  font-family: inherit;
+}
+
+/* 直近日付 */
+.recent-section {
+  margin-top: 16px;
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 14px;
+  box-shadow: var(--shadow-sm);
+}
+.recent-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+}
+.recent-btn {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 10px 12px;
+  margin-bottom: 4px;
+  background: var(--surface);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--text);
+  min-height: 44px;
+  transition: background 0.1s;
+  gap: 8px;
+}
+.recent-btn:active { background: var(--accent-light); }
+.recent-btn .date-main { font-weight: 600; flex: 1; text-align: left; }
+.recent-btn .date-iso { font-size: 11px; color: var(--muted); }
+.recent-btn .arrow { color: var(--muted); }
+
+/* ── 場選択画面 ── */
+.venue-screen { padding: 12px 16px 24px; }
+.venue-screen-date {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 12px;
+  letter-spacing: 0.3px;
+}
+.venue-card {
+  display: flex;
+  align-items: center;
+  padding: 16px;
+  background: var(--card);
+  border-radius: var(--radius);
+  margin-bottom: 8px;
+  cursor: pointer;
+  gap: 12px;
+  box-shadow: var(--shadow);
+  transition: transform 0.1s;
+  position: relative;
+  overflow: hidden;
+}
+.venue-card:active { transform: scale(0.98); }
+.venue-card::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 4px;
+}
+.venue-card.has-rec::before { background: linear-gradient(180deg, #dc2626, #f97316); }
+.venue-name {
+  font-size: 18px;
+  font-weight: 800;
+  min-width: 70px;
+}
+.venue-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.venue-race-count {
+  font-size: 13px;
+  color: var(--sub);
+  font-weight: 600;
+}
+.venue-conf-summary {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.venue-conf-tag {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+.venue-conf-high { background: #fef2f2; color: #dc2626; }
+.venue-conf-mid { background: #fff7ed; color: #ea580c; }
+.venue-conf-low { background: #f1f5f9; color: #64748b; }
+.venue-time-range {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 500;
+}
+.venue-chevron { color: var(--muted); font-size: 18px; }
+
+/* ── レース一覧 ── */
+.racelist-screen { padding: 12px 16px 24px; }
+.racelist-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.racelist-venue-name {
+  font-size: 18px;
+  font-weight: 800;
+}
+.racelist-date-label {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.race-card {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  background: var(--card);
+  border-radius: var(--radius-sm);
+  margin-bottom: 6px;
+  cursor: pointer;
+  gap: 10px;
+  min-height: 48px;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.1s;
+}
+.race-card:active { transform: scale(0.98); }
+.race-num {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--accent);
+  min-width: 30px;
+}
+.race-name {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text);
+}
+.race-meta { display: flex; align-items: center; gap: 6px; }
+.no-pred { font-size: 10px; color: var(--muted); font-weight: 500; }
+.race-chevron { color: var(--muted); font-size: 14px; }
+.race-conf {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+.race-conf-high { background: #fef2f2; color: #dc2626; }
+.race-conf-mid { background: #fff7ed; color: #ea580c; }
+.race-conf-low { background: #f1f5f9; color: #64748b; }
+
+/* グレードバッジ */
+.grade {
+  font-size: 10px;
+  font-weight: 800;
+  color: #fff;
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+.grade-SG { background: var(--grade-sg); }
+.grade-G1 { background: var(--grade-g1); }
+.grade-G2 { background: var(--grade-g2); }
+.grade-G3 { background: var(--grade-g3); }
+
+/* ナイターバッジ */
+.night-badge {
+  font-size: 9px;
+  font-weight: 700;
+  background: #1e293b;
+  color: #fbbf24;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* ── レース詳細 ── */
+.detail-screen { padding: 12px 16px 32px; }
+.detail-header {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow);
+}
+.detail-title {
+  font-size: 16px;
+  font-weight: 800;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.detail-meta {
+  font-size: 12px;
+  color: var(--sub);
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.detail-meta-item { display: flex; align-items: center; gap: 3px; }
+
+/* 水面コンディション */
+.condition-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+.condition-tag {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--sub);
+}
+
+/* 予測テーブル */
+.pred-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--card);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  font-size: 13px;
+}
+.pred-table thead { background: #f1f5f9; }
+.pred-table th {
+  padding: 10px 3px;
+  font-weight: 700;
+  font-size: 10px;
+  color: var(--sub);
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.pred-table td {
+  padding: 10px 3px;
+  text-align: center;
+  border-top: 1px solid var(--border);
+  vertical-align: middle;
+}
+.pred-table tbody tr:first-child td { border-top: none; }
+.pred-table tbody tr.top3-row { background: #fefce8; }
+.pred-table tbody tr:active { background: var(--accent-light); }
+
+.mark { font-weight: 800; font-size: 16px; }
+.mark-honmei { color: var(--honmei); }
+.mark-taikou { color: var(--taikou); }
+.mark-tanana { color: var(--tanana); }
+.mark-renka  { color: var(--renka); }
+
+.racer-name-cell {
+  text-align: left !important;
+  padding-left: 6px !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 80px;
+  font-weight: 500;
+}
+.class-cell { font-size: 11px; color: var(--sub); font-weight: 600; }
+.rate-cell { font-size: 11px; color: var(--sub); }
+.result-cell { font-weight: 800; font-size: 15px; }
+.result-1 { color: var(--honmei); }
+.result-2 { color: var(--taikou); }
+.result-3 { color: var(--tanana); }
+
+/* 展示・モーター情報 */
+.extra-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--card);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  font-size: 12px;
+  margin-top: 12px;
+}
+.extra-table thead { background: #f1f5f9; }
+.extra-table th {
+  padding: 8px 3px;
+  font-weight: 700;
+  font-size: 10px;
+  color: var(--sub);
+  text-align: center;
+}
+.extra-table td {
+  padding: 8px 3px;
+  text-align: center;
+  border-top: 1px solid var(--border);
+}
+.extra-table tbody tr:first-child td { border-top: none; }
+.motor-good { color: #dc2626; font-weight: 700; }
+
+/* 買い目推奨 */
+.bet-section {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-top: 12px;
+  box-shadow: var(--shadow);
+}
+.bet-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.bet-title { font-size: 14px; font-weight: 800; }
+.bet-conf-label {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+.conf-bar {
+  flex: 1;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.conf-fill { height: 100%; border-radius: 2px; }
+.conf-fill-high { background: var(--honmei); }
+.conf-fill-mid { background: var(--grade-g2); }
+.conf-fill-low { background: var(--renka); }
+
+.bet-group-label {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 12px 0 6px;
+}
+.bet-row {
+  display: flex;
+  align-items: center;
+  padding: 8px 10px;
+  margin-bottom: 4px;
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  gap: 8px;
+}
+.bet-combo { font-weight: 800; flex: 1; font-size: 14px; letter-spacing: 0.5px; }
+.bet-names { font-size: 11px; color: var(--sub); white-space: nowrap; }
+.bet-tag {
+  font-size: 9px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.tag-honmei { background: var(--honmei); }
+.tag-chuuana { background: var(--grade-g2); }
+.tag-ouana { background: var(--grade-sg); }
+
+/* ローディング / エラー */
+.loading, .empty-msg, .error-msg {
+  text-align: center;
+  padding: 48px 16px;
+  color: var(--muted);
+  font-size: 14px;
+}
+.error-msg { color: var(--honmei); }
+.spinner {
+  display: inline-block;
+  width: 28px; height: 28px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  margin-bottom: 12px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.empty-icon { font-size: 32px; margin-bottom: 8px; opacity: 0.5; }
+
+/* レース状態バッジ */
+.race-status {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+.status-live { background: #dc2626; color: #fff; animation: pulse 1.5s infinite; }
+.status-finished { background: #e2e8f0; color: #64748b; }
+.status-upcoming { background: #dbeafe; color: #2563eb; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.7; } }
+
+.race-card.is-finished { opacity: 0.5; }
+.race-card.is-finished:active { opacity: 0.7; }
+.race-card.is-live { border-left: 3px solid #dc2626; }
+
+.venue-status-row { display: flex; gap: 6px; align-items: center; margin-top: 2px; }
+.venue-status-tag {
+  font-size: 10px; font-weight: 700;
+  padding: 1px 6px; border-radius: 8px;
+}
+.venue-live-tag { background: #fef2f2; color: #dc2626; }
+.venue-done-tag { background: #f1f5f9; color: #94a3b8; }
+
+/* ── 前日の結果セクション ── */
+.yday-section { margin-bottom: 16px; }
+.yday-summary {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.yday-stat {
+  flex: 1;
+  background: var(--card);
+  border-radius: var(--radius-sm);
+  padding: 10px 6px;
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+}
+.yday-stat-value {
+  display: block;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1.2;
+}
+.yday-stat-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.yday-stat-sub {
+  font-size: 10px;
+  color: var(--sub);
+  font-weight: 500;
+}
+.yday-card {
+  background: var(--card);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  margin-bottom: 4px;
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: transform 0.1s;
+  border-left: 3px solid transparent;
+}
+.yday-card:active { transform: scale(0.98); }
+.yday-card.yday-high-hit { border-left-color: #059669; }
+.yday-card.yday-high-miss { border-left-color: #dc2626; }
+.yday-card-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.yday-venue {
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.yday-hit {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #dcfce7;
+  color: #059669;
+  margin-left: auto;
+  white-space: nowrap;
+}
+.yday-miss {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #f1f5f9;
+  color: #94a3b8;
+  margin-left: auto;
+  white-space: nowrap;
+}
+.yday-comparison {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.yday-racer {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: var(--surface);
+}
+.yday-racer.yday-in-top3 { background: #f0fdf4; }
+.yday-arrow { color: var(--muted); font-size: 10px; margin: 0 1px; }
+.yday-finish { font-weight: 700; font-size: 12px; }
+.yday-in-top3 .yday-finish { color: #059669; }
+.yday-out-top3 .yday-finish { color: #94a3b8; }
+.yday-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-top: 4px;
+  gap: 3px;
+}
+.yday-top3-label {
+  font-size: 10px;
+  color: var(--sub);
+  font-weight: 600;
+}
+.yday-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.yday-dot-hit { background: #059669; }
+.yday-dot-miss { background: #e2e8f0; }
+
+/* ── トップへ戻るボタン ── */
+.scroll-top {
+  position: fixed;
+  bottom: 24px;
+  right: 16px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 44px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s, transform 0.2s;
+  z-index: 99;
+}
+.scroll-top.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+.scroll-top:active { transform: scale(0.9); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <button class="back-btn hidden" id="backBtn" aria-label="戻る">&#8592;</button>
+  <h1 id="headerTitle">競艇AI予想<span class="header-sub">by AI</span></h1>
+</div>
+
+<!-- 日付選択画面 -->
+<div id="dateScreen" class="date-screen screen">
+  <div id="recommendSection" class="recommend-section"></div>
+  <div id="yesterdaySection"></div>
+  <div class="date-nav">
+    <button class="date-btn primary" id="todayBtn">今日</button>
+    <button class="date-btn secondary" id="tomorrowBtn">明日</button>
+  </div>
+  <div class="date-picker">
+    <label for="dateInput">日付指定</label>
+    <input type="date" id="dateInput" class="date-input">
+    <button class="date-go-btn" id="dateGoBtn">表示</button>
+  </div>
+  <div id="latestInfo" class="recent-section"></div>
+</div>
+
+<!-- 場選択 -->
+<div id="venueScreen" class="venue-screen hidden"></div>
+
+<!-- レース一覧（1場分） -->
+<div id="racelistScreen" class="racelist-screen hidden"></div>
+
+<!-- レース詳細 -->
+<div id="detailScreen" class="detail-screen hidden"></div>
+
+<button class="scroll-top" id="scrollTopBtn" aria-label="トップへ戻る">&#8593;</button>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+(function() {
+  "use strict";
+
+  const SUPABASE_URL = "https://lcdxgzprobmewotcndsc.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxjZHhnenByb2JtZXdvdGNuZHNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwMTIyMjUsImV4cCI6MjA4OTU4ODIyNX0.HKOv9c9XHsx_dBhLewe7qQVs3db5k8r_g7en9EBM9c4";
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  const $ = (s) => document.querySelector(s);
+  const S = { screen: "date", date: null, venue: null, raceId: null };
+
+  function showScreen(name) {
+    S.screen = name;
+    $("#dateScreen").classList.toggle("hidden", name !== "date");
+    $("#venueScreen").classList.toggle("hidden", name !== "venue");
+    $("#racelistScreen").classList.toggle("hidden", name !== "racelist");
+    $("#detailScreen").classList.toggle("hidden", name !== "detail");
+    $("#backBtn").classList.toggle("hidden", name === "date");
+    if (name === "date") $("#headerTitle").innerHTML = '競艇AI予想<span class="header-sub">by AI</span>';
+    window.scrollTo(0, 0);
+  }
+
+  function todayStr() {
+    const d = new Date();
+    return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+  }
+  function tomorrowStr() {
+    const d = new Date(); d.setDate(d.getDate()+1);
+    return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+  }
+  function formatDate(s) {
+    const d = new Date(s + "T00:00:00");
+    const dow = ["日","月","火","水","木","金","土"][d.getDay()];
+    return (d.getMonth()+1) + "/" + d.getDate() + "(" + dow + ")";
+  }
+
+  function gradeBadge(g) {
+    if (!g) return '';
+    var cls = 'grade-' + g;
+    return '<span class="grade ' + cls + '">' + g + '</span>';
+  }
+
+  function nightBadge(isNight) {
+    if (!isNight) return '';
+    return '<span class="night-badge">ナイター</span>';
+  }
+
+  function courseCircle(num) {
+    const n = parseInt(num) || 0;
+    const cls = (n >= 1 && n <= 6) ? "course-" + n : "";
+    return '<span class="course-circle ' + cls + '">' + num + '</span>';
+  }
+
+  function markClass(m) {
+    if (m === "\u25ce") return "mark-honmei";
+    if (m === "\u25cb") return "mark-taikou";
+    if (m === "\u25b2") return "mark-tanana";
+    if (m === "\u25b3") return "mark-renka";
+    return "";
+  }
+
+  function nowHHMM() {
+    const d = new Date();
+    return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+  }
+
+  function isToday(dateStr) {
+    return dateStr === todayStr();
+  }
+
+  // レース状態: "upcoming" / "live" / "finished"
+  // 競艇1レースは約15分
+  function raceStatus(startTime, dateStr) {
+    if (!startTime || !isToday(dateStr)) return null;
+    const now = nowHHMM();
+    const [sh, sm] = startTime.split(":").map(Number);
+    const startMin = sh * 60 + sm;
+    const [nh, nm] = now.split(":").map(Number);
+    const nowMin = nh * 60 + nm;
+    if (nowMin < startMin) return "upcoming";
+    if (nowMin < startMin + 15) return "live";
+    return "finished";
+  }
+
+  function statusBadge(status) {
+    if (status === "live") return '<span class="race-status status-live">LIVE</span>';
+    if (status === "finished") return '<span class="race-status status-finished">終了</span>';
+    if (status === "upcoming") return '<span class="race-status status-upcoming">発走前</span>';
+    return '';
+  }
+
+  function loadingHTML() {
+    return '<div class="loading"><div class="spinner"></div><br>読み込み中...</div>';
+  }
+
+  /* ── おすすめレース ── */
+  async function loadRecommendations() {
+    const el = $("#recommendSection");
+    const today = todayStr();
+    try {
+      const { data, error } = await sb
+        .from("prediction_detail")
+        .select("race_id, venue_name, race_number, grade, start_time, is_night, racer_id, racer_name, course, predicted_score, predicted_rank, mark, finish_position")
+        .eq("race_date", today)
+        .order("race_id")
+        .order("predicted_rank");
+      if (error) throw error;
+      if (!data || data.length === 0) { el.innerHTML = ""; return; }
+
+      const groups = {};
+      for (const r of data) { if (!groups[r.race_id]) groups[r.race_id] = []; groups[r.race_id].push(r); }
+
+      const recs = [];
+      for (const [id, rows] of Object.entries(groups)) {
+        if (rows.length < 3) continue;
+        if (rows.some(r => r.finish_position != null)) continue;
+        const sorted = rows.sort((a, b) => a.predicted_rank - b.predicted_rank);
+        const conf = sorted[0].predicted_score - sorted[2].predicted_score;
+        if (conf >= 2.3) {
+          const st = raceStatus(rows[0].start_time, today);
+          if (st === "finished") continue;
+          recs.push({ id, v: rows[0].venue_name, rn: rows[0].race_number, g: rows[0].grade,
+            t: rows[0].start_time, night: rows[0].is_night, conf, top3: sorted.slice(0, 3), top4: sorted[3], status: st });
+        }
+      }
+      if (recs.length === 0) { el.innerHTML = ""; return; }
+
+      recs.sort((a, b) => {
+        if (a.t && b.t) return a.t.localeCompare(b.t);
+        if (a.t) return -1; if (b.t) return 1;
+        return b.conf - a.conf;
+      });
+
+      let h = '<div class="section-header">';
+      h += '<div class="section-icon">&#9733;</div>';
+      h += '<span class="section-title">今日のおすすめ</span>';
+      h += '<span class="section-badge">' + recs.length + '件</span>';
+      h += '</div>';
+
+      for (const r of recs) {
+        const confCls = r.conf >= 3.5 ? "conf-very-high" : "conf-high";
+        h += '<div class="rec-card" data-raceid="' + r.id + '">';
+        h += '<div class="rec-top">';
+        h += '<span class="rec-time">' + (r.t || "--:--") + '</span>';
+        h += '<span class="rec-venue">' + r.v + ' ' + r.rn + 'R ' + gradeBadge(r.g) + ' ' + nightBadge(r.night) + ' ' + statusBadge(r.status) + '</span>';
+        h += '<span class="rec-conf ' + confCls + '">' + r.conf.toFixed(2) + '</span>';
+        h += '</div>';
+        h += '<div class="rec-courses">';
+        h += '<div class="rec-course-group"><span class="rec-course-label">BOX3</span>';
+        for (const p of r.top3) h += courseCircle(p.course);
+        h += '</div>';
+        if (r.top4) {
+          h += '<span class="rec-plus">+</span>';
+          h += '<div class="rec-course-group"><span class="rec-course-label">BOX4</span>';
+          h += courseCircle(r.top4.course);
+          h += '</div>';
+        }
+        h += '</div>';
+        h += '<div class="rec-racers">';
+        h += r.top3.map(p => (p.racer_name || "").slice(0, 3)).join(" / ");
+        if (r.top4) h += ' / ' + (r.top4.racer_name || "").slice(0, 3);
+        h += '</div>';
+        h += '<span class="rec-arrow">&#8250;</span>';
+        h += '</div>';
+      }
+      el.innerHTML = h;
+      el.querySelectorAll(".rec-card").forEach(function(c) {
+        c.addEventListener("click", function() { loadRaceDetail(c.dataset.raceid); });
+      });
+    } catch (e) { el.innerHTML = ""; }
+  }
+
+  // 信頼度計算 (1位vs3位スコア差)
+  function calcRaceConf(predsByRace) {
+    const conf = {};
+    for (const [rid, rows] of Object.entries(predsByRace)) {
+      if (rows.length < 3) continue;
+      rows.sort((a, b) => a.predicted_rank - b.predicted_rank);
+      conf[rid] = rows[0].predicted_score - rows[2].predicted_score;
+    }
+    return conf;
+  }
+
+  function confBadge(conf) {
+    if (conf == null) return '';
+    var cls;
+    if (conf >= 2.3) cls = 'race-conf-high';
+    else if (conf >= 0.85) cls = 'race-conf-mid';
+    else cls = 'race-conf-low';
+    return '<span class="race-conf ' + cls + '">信頼度 ' + conf.toFixed(1) + '</span>';
+  }
+
+  let cachedDate = null, cachedRaces = null, cachedRaceConf = null, cachedPredSet = null;
+
+  async function fetchDateData(dateStr) {
+    if (cachedDate === dateStr && cachedRaces) return;
+    const { data: races, error } = await sb
+      .from("races")
+      .select("race_id, venue_name, venue_code, race_number, race_name, grade, racer_count, start_time, is_night")
+      .eq("date", dateStr)
+      .order("race_id");
+    if (error) throw error;
+    cachedRaces = races || [];
+    cachedDate = dateStr;
+    if (cachedRaces.length === 0) { cachedRaceConf = {}; cachedPredSet = new Set(); return; }
+    const raceIds = cachedRaces.map(r => r.race_id);
+    const { data: preds } = await sb.from("predictions").select("race_id, predicted_score, predicted_rank").in("race_id", raceIds).order("predicted_rank");
+    cachedPredSet = new Set((preds || []).map(p => p.race_id));
+    const byRace = {};
+    for (const p of (preds || [])) { if (!byRace[p.race_id]) byRace[p.race_id] = []; byRace[p.race_id].push(p); }
+    cachedRaceConf = calcRaceConf(byRace);
+  }
+
+  /* ── 場選択画面 ── */
+  async function loadVenueList(dateStr) {
+    S.date = dateStr;
+    showScreen("venue");
+    $("#headerTitle").textContent = formatDate(dateStr);
+    const el = $("#venueScreen");
+    el.innerHTML = loadingHTML();
+    try {
+      await fetchDateData(dateStr);
+      if (cachedRaces.length === 0) {
+        el.innerHTML = '<div class="empty-msg"><div class="empty-icon">&#128197;</div>この日のレースデータがありません</div>';
+        return;
+      }
+
+      const groups = {};
+      for (const r of cachedRaces) { const k = r.venue_name || "不明"; if (!groups[k]) groups[k] = []; groups[k].push(r); }
+
+      const venueEntries = Object.entries(groups);
+      if (isToday(dateStr)) {
+        venueEntries.sort(function(a, b) {
+          var aRaces = a[1], bRaces = b[1];
+          var aStatuses = aRaces.map(function(r) { return raceStatus(r.start_time, dateStr); });
+          var bStatuses = bRaces.map(function(r) { return raceStatus(r.start_time, dateStr); });
+          var aLive = aStatuses.some(function(s) { return s === "live"; });
+          var bLive = bStatuses.some(function(s) { return s === "live"; });
+          if (aLive !== bLive) return aLive ? -1 : 1;
+          var aAllDone = aStatuses.length > 0 && aStatuses.every(function(s) { return s === "finished"; });
+          var bAllDone = bStatuses.length > 0 && bStatuses.every(function(s) { return s === "finished"; });
+          if (aAllDone !== bAllDone) return aAllDone ? 1 : -1;
+          var aNext = aRaces.filter(function(r) { return raceStatus(r.start_time, dateStr) === "upcoming"; }).map(function(r) { return r.start_time || "99:99"; });
+          var bNext = bRaces.filter(function(r) { return raceStatus(r.start_time, dateStr) === "upcoming"; }).map(function(r) { return r.start_time || "99:99"; });
+          var aMin = aNext.length > 0 ? aNext[0] : "99:99";
+          var bMin = bNext.length > 0 ? bNext[0] : "99:99";
+          return aMin.localeCompare(bMin);
+        });
+      }
+
+      let h = '<div class="venue-screen-date">' + formatDate(dateStr) + ' の開催場</div>';
+      for (const [venue, vr] of venueEntries) {
+        const confs = vr.map(r => cachedRaceConf[r.race_id]).filter(c => c != null);
+        const highCount = confs.filter(c => c >= 2.3).length;
+        const midCount = confs.filter(c => c >= 0.85 && c < 2.3).length;
+        const hasRec = highCount > 0;
+        const times = vr.map(r => r.start_time).filter(Boolean);
+        const timeRange = times.length >= 2 ? times[0] + ' - ' + times[times.length - 1] : (times[0] || '');
+        const isNight = vr.some(r => r.is_night);
+        const statuses = vr.map(r => raceStatus(r.start_time, dateStr));
+        const liveCount = statuses.filter(s => s === "live").length;
+        const finishedCount = statuses.filter(s => s === "finished").length;
+        const upcomingCount = statuses.filter(s => s === "upcoming").length;
+        const allFinished = isToday(dateStr) && times.length > 0 && finishedCount === vr.length;
+
+        h += '<div class="venue-card' + (hasRec ? ' has-rec' : '') + '" data-venue="' + venue + '"' + (allFinished ? ' style="opacity:0.5"' : '') + '>';
+        h += '<span class="venue-name">' + venue + '</span>';
+        h += '<div class="venue-info">';
+        h += '<span class="venue-race-count">' + vr.length + 'レース' + (isNight ? ' ' + nightBadge(true) : '') + '</span>';
+        if (timeRange) h += '<span class="venue-time-range">' + timeRange + '</span>';
+        if (isToday(dateStr) && times.length > 0) {
+          h += '<div class="venue-status-row">';
+          if (liveCount > 0) h += '<span class="venue-status-tag venue-live-tag">LIVE ' + liveCount + 'R</span>';
+          if (upcomingCount > 0) h += '<span class="venue-status-tag" style="background:#dbeafe;color:#2563eb">発走前 ' + upcomingCount + 'R</span>';
+          if (finishedCount > 0) h += '<span class="venue-status-tag venue-done-tag">終了 ' + finishedCount + 'R</span>';
+          h += '</div>';
+        }
+        if (confs.length > 0) {
+          h += '<div class="venue-conf-summary">';
+          if (highCount > 0) h += '<span class="venue-conf-tag venue-conf-high">高信頼 ' + highCount + 'R</span>';
+          if (midCount > 0) h += '<span class="venue-conf-tag venue-conf-mid">中信頼 ' + midCount + 'R</span>';
+          h += '</div>';
+        }
+        h += '</div>';
+        h += '<span class="venue-chevron">&#8250;</span>';
+        h += '</div>';
+      }
+      el.innerHTML = h;
+      el.querySelectorAll(".venue-card").forEach(function(c) {
+        c.addEventListener("click", function() { loadRaceList(dateStr, c.dataset.venue); });
+      });
+    } catch (err) {
+      el.innerHTML = '<div class="error-msg">読み込みエラー: ' + err.message + '</div>';
+    }
+  }
+
+  /* ── レース一覧（1場分） ── */
+  async function loadRaceList(dateStr, venue) {
+    S.date = dateStr;
+    S.venue = venue;
+    showScreen("racelist");
+    $("#headerTitle").textContent = venue + ' ' + formatDate(dateStr);
+    const el = $("#racelistScreen");
+    el.innerHTML = loadingHTML();
+    try {
+      await fetchDateData(dateStr);
+      const venueRaces = cachedRaces.filter(r => r.venue_name === venue);
+      if (isToday(dateStr)) {
+        venueRaces.sort(function(a, b) {
+          var sa = raceStatus(a.start_time, dateStr) || "";
+          var sb2 = raceStatus(b.start_time, dateStr) || "";
+          var order = { "live": 0, "upcoming": 1, "finished": 2, "": 3 };
+          var diff = (order[sa] || 3) - (order[sb2] || 3);
+          if (diff !== 0) return diff;
+          return (a.start_time || "").localeCompare(b.start_time || "");
+        });
+      }
+      if (venueRaces.length === 0) {
+        el.innerHTML = '<div class="empty-msg"><div class="empty-icon">&#128197;</div>この場のレースデータがありません</div>';
+        return;
+      }
+
+      let h = '<div class="racelist-header">';
+      h += '<span class="racelist-venue-name">' + venue + '</span>';
+      h += '<span class="racelist-date-label">' + formatDate(dateStr) + ' / ' + venueRaces.length + 'R</span>';
+      h += '</div>';
+
+      for (const r of venueRaces) {
+        const has = cachedPredSet.has(r.race_id);
+        const title = r.race_name || (r.race_number + "R");
+        const conf = cachedRaceConf[r.race_id];
+        const status = raceStatus(r.start_time, dateStr);
+        const cardCls = status === "finished" ? " is-finished" : status === "live" ? " is-live" : "";
+        h += '<div class="race-card' + cardCls + '" data-raceid="' + r.race_id + '">';
+        h += '<span class="race-num">' + r.race_number + 'R</span>';
+        h += '<span class="race-name">' + title + '</span>';
+        h += '<div class="race-meta">';
+        if (r.start_time) h += '<span style="font-size:11px;color:var(--sub);font-weight:600">' + r.start_time + '</span>';
+        h += statusBadge(status);
+        h += gradeBadge(r.grade);
+        if (has && conf != null) h += confBadge(conf);
+        if (!has) h += '<span class="no-pred">予測なし</span>';
+        h += '</div>';
+        h += '<span class="race-chevron">&#8250;</span>';
+        h += '</div>';
+      }
+      el.innerHTML = h;
+      el.querySelectorAll(".race-card").forEach(function(c) {
+        c.addEventListener("click", function() { loadRaceDetail(c.dataset.raceid); });
+      });
+    } catch (err) {
+      el.innerHTML = '<div class="error-msg">読み込みエラー: ' + err.message + '</div>';
+    }
+  }
+
+  /* ── レース詳細 ── */
+  async function loadRaceDetail(raceId) {
+    S.raceId = raceId;
+    showScreen("detail");
+    const el = $("#detailScreen");
+    el.innerHTML = loadingHTML();
+    try {
+      const { data, error } = await sb.from("prediction_detail").select("*").eq("race_id", raceId).order("predicted_rank");
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        const { data: ri } = await sb.from("races").select("*").eq("race_id", raceId).single();
+        let h = "";
+        if (ri) {
+          h += '<div class="detail-header"><div class="detail-title">' + (ri.race_name || ri.race_number + "R") + ' ' + gradeBadge(ri.grade) + '</div>';
+          h += '<div class="detail-meta"><span>' + formatDate(ri.date) + '</span><span>' + (ri.venue_name || '') + '</span></div></div>';
+        }
+        h += '<div class="empty-msg"><div class="empty-icon">&#128202;</div>このレースの予測データがありません</div>';
+        el.innerHTML = h;
+        return;
+      }
+
+      const race = data[0];
+      if (!S.venue) S.venue = race.venue_name;
+      if (!S.date) S.date = race.race_date;
+      $("#headerTitle").textContent = race.venue_name + " " + race.race_number + "R";
+
+      let h = '<div class="detail-header">';
+      h += '<div class="detail-title">' + (race.race_name || race.race_number + "R") + ' ' + gradeBadge(race.grade) + ' ' + nightBadge(race.is_night) + '</div>';
+      const detailStatus = raceStatus(race.start_time, race.race_date);
+      h += '<div class="detail-meta">';
+      h += '<span class="detail-meta-item">' + formatDate(race.race_date) + '</span>';
+      h += '<span class="detail-meta-item">' + race.venue_name + '</span>';
+      if (race.start_time) h += '<span class="detail-meta-item">' + race.start_time + '発走</span>';
+      h += statusBadge(detailStatus);
+      if (race.distance) h += '<span class="detail-meta-item">' + race.distance + 'm</span>';
+      if (race.racer_count) h += '<span class="detail-meta-item">' + race.racer_count + '艇</span>';
+      h += '</div>';
+
+      // 水面コンディション
+      if (race.weather || race.wind_speed != null || race.wave_height != null) {
+        h += '<div class="condition-row">';
+        if (race.weather) h += '<span class="condition-tag">' + race.weather + '</span>';
+        if (race.wind_speed != null) h += '<span class="condition-tag">風速 ' + race.wind_speed + 'm</span>';
+        if (race.wave_height != null) h += '<span class="condition-tag">波高 ' + race.wave_height + 'cm</span>';
+        h += '</div>';
+      }
+      h += '</div>';
+
+      const hasRes = data.some(d => d.finish_position != null);
+
+      // メイン予測テーブル
+      h += '<table class="pred-table"><thead><tr>';
+      h += '<th>予</th><th>印</th><th>コース</th><th style="text-align:left">選手</th><th>級</th><th>勝率</th>';
+      if (hasRes) h += '<th>着</th>';
+      h += '</tr></thead><tbody>';
+
+      for (const row of data) {
+        const mc = markClass(row.mark);
+        const cs = row.course || "-";
+        const isTop3 = row.predicted_rank <= 3;
+        h += '<tr' + (isTop3 ? ' class="top3-row"' : '') + '>';
+        h += '<td>' + (row.predicted_rank || "-") + '</td>';
+        h += '<td><span class="mark ' + mc + '">' + (row.mark || "") + '</span></td>';
+        h += '<td>' + courseCircle(cs) + '</td>';
+        h += '<td class="racer-name-cell">' + (row.racer_name || "-") + '</td>';
+        h += '<td class="class-cell">' + (row.racer_class || "-") + '</td>';
+        h += '<td class="rate-cell">' + (row.national_win_rate != null ? row.national_win_rate.toFixed(2) : "-") + '</td>';
+        if (hasRes) {
+          const fp = row.finish_position;
+          const rc = fp === 1 ? "result-1" : fp === 2 ? "result-2" : fp === 3 ? "result-3" : "";
+          h += '<td class="result-cell ' + rc + '">' + (fp != null ? fp : "-") + '</td>';
+        }
+        h += '</tr>';
+      }
+      h += '</tbody></table>';
+
+      // 展示・モーター・ボート情報テーブル
+      if (data.some(d => d.motor_no || d.exhibition_time || d.start_timing != null)) {
+        h += '<table class="extra-table"><thead><tr>';
+        h += '<th>コース</th><th>選手</th><th>モーター</th><th>モ2率</th><th>ボート</th><th>ボ2率</th><th>展示T</th><th>ST</th>';
+        h += '</tr></thead><tbody>';
+        for (const row of data) {
+          const cs = row.course || "-";
+          const motorGood = row.motor_2nd_rate != null && row.motor_2nd_rate >= 40;
+          h += '<tr>';
+          h += '<td>' + courseCircle(cs) + '</td>';
+          h += '<td style="font-size:11px;text-align:left;padding-left:4px">' + ((row.racer_name || "").slice(0, 4)) + '</td>';
+          h += '<td style="font-size:11px">' + (row.motor_no || "-") + '</td>';
+          h += '<td class="' + (motorGood ? 'motor-good' : '') + '" style="font-size:11px">' + (row.motor_2nd_rate != null ? row.motor_2nd_rate.toFixed(1) + '%' : '-') + '</td>';
+          h += '<td style="font-size:11px">' + (row.boat_no || "-") + '</td>';
+          h += '<td style="font-size:11px">' + (row.boat_2nd_rate != null ? row.boat_2nd_rate.toFixed(1) + '%' : '-') + '</td>';
+          h += '<td style="font-size:11px">' + (row.exhibition_time != null ? row.exhibition_time.toFixed(2) : '-') + '</td>';
+          h += '<td style="font-size:11px">' + (row.start_timing != null ? row.start_timing.toFixed(2) : '-') + '</td>';
+          h += '</tr>';
+        }
+        h += '</tbody></table>';
+      }
+
+      if (!hasRes && data.length >= 3) h += buildBetSection(data);
+      el.innerHTML = h;
+    } catch (err) {
+      el.innerHTML = '<div class="error-msg">読み込みエラー: ' + err.message + '</div>';
+    }
+  }
+
+  /* ── 買い目推奨 ── */
+  function buildBetSection(data) {
+    const scores = data.map(d => d.predicted_score || 0);
+    const maxS = Math.max(...scores);
+    const exps = scores.map(s => Math.exp((s - maxS) * 3));
+    const sumE = exps.reduce((a, b) => a + b, 0);
+    const probs = exps.map(e => e / sumE);
+    const top = data.slice(0, 5).map((d, i) => ({
+      rank: i+1, mark: d.mark || "", course: d.course || "?",
+      name: (d.racer_name || "").slice(0, 4), prob: probs[i], score: d.predicted_score || 0,
+    }));
+
+    const gap12 = top[0].score - top[1].score;
+    let lvl, pct, fillCls, label;
+    if (gap12 > 0.25) { lvl = "high"; pct = 85; fillCls = "conf-fill-high"; label = "堅いレース"; }
+    else if (gap12 > 0.1) { lvl = "mid"; pct = 60; fillCls = "conf-fill-mid"; label = "普通"; }
+    else { lvl = "low"; pct = 35; fillCls = "conf-fill-low"; label = "混戦"; }
+
+    let h = '<div class="bet-section">';
+    h += '<div class="bet-header"><span class="bet-title">おすすめ買い目</span>';
+    h += '<span class="bet-conf-label" style="background:' + (lvl === "high" ? "#fef2f2;color:#dc2626" : lvl === "mid" ? "#fff7ed;color:#ea580c" : "#f1f5f9;color:#64748b") + '">' + label + '</span>';
+    h += '<div class="conf-bar"><div class="conf-fill ' + fillCls + '" style="width:' + pct + '%"></div></div>';
+    h += '</div>';
+
+    // 競艇: 3連単 → 2連単 → ワイド の順（3連単が花形）
+    if (top.length >= 3) {
+      h += '<div class="bet-group-label">3連単（1着-2着-3着）</div>';
+      const tr = [
+        { a: top[0], b: top[1], c: top[2], tag: "本命", cls: "tag-honmei" },
+        { a: top[0], b: top[2], c: top[1], tag: "対抗", cls: "tag-honmei" },
+      ];
+      if (lvl !== "high" && top[3]) {
+        tr.push({ a: top[0], b: top[1], c: top[3], tag: "中穴", cls: "tag-chuuana" });
+        tr.push({ a: top[1], b: top[0], c: top[2], tag: "中穴", cls: "tag-chuuana" });
+      }
+      if (lvl === "low" && top[3]) tr.push({ a: top[0], b: top[2], c: top[3], tag: "大穴", cls: "tag-ouana" });
+      for (const t of tr) {
+        h += '<div class="bet-row"><span class="bet-combo">' + t.a.course + ' → ' + t.b.course + ' → ' + t.c.course + '</span>';
+        h += '<span class="bet-names">' + t.a.name + '→' + t.b.name + '→' + t.c.name + '</span>';
+        h += '<span class="bet-tag ' + t.cls + '">' + t.tag + '</span></div>';
+      }
+    }
+
+    h += '<div class="bet-group-label">2連単（1着-2着）</div>';
+    const ex = [{ a: top[0], b: top[1], tag: "本命", cls: "tag-honmei" }, { a: top[0], b: top[2], tag: "対抗", cls: "tag-honmei" }];
+    if (lvl !== "high") {
+      ex.push({ a: top[1], b: top[0], tag: "中穴", cls: "tag-chuuana" });
+      if (top[2]) ex.push({ a: top[1], b: top[2], tag: "中穴", cls: "tag-chuuana" });
+    }
+    for (const e of ex) {
+      h += '<div class="bet-row"><span class="bet-combo">' + e.a.course + ' → ' + e.b.course + '</span>';
+      h += '<span class="bet-names">' + e.a.name + '→' + e.b.name + '</span>';
+      h += '<span class="bet-tag ' + e.cls + '">' + e.tag + '</span></div>';
+    }
+
+    h += '<div class="bet-group-label">2連複（3着以内の2人）</div>';
+    const wd = [
+      { a: top[0], b: top[1], tag: "本命", cls: "tag-honmei" },
+      { a: top[0], b: top[2], tag: "本命", cls: "tag-honmei" },
+      { a: top[1], b: top[2], tag: "対抗", cls: "tag-honmei" },
+    ];
+    if (top[3]) wd.push({ a: top[0], b: top[3], tag: "中穴", cls: "tag-chuuana" });
+    for (const w of wd) {
+      const lo = Math.min(w.a.course, w.b.course), hi = Math.max(w.a.course, w.b.course);
+      h += '<div class="bet-row"><span class="bet-combo">' + lo + ' = ' + hi + '</span>';
+      h += '<span class="bet-names">' + w.a.name + '-' + w.b.name + '</span>';
+      h += '<span class="bet-tag ' + w.cls + '">' + w.tag + '</span></div>';
+    }
+    h += '</div>';
+    return h;
+  }
+
+  /* ── 前日の結果 ── */
+  async function loadYesterdayResults() {
+    var el = $("#yesterdaySection");
+    try {
+      var today = todayStr();
+      var { data: recent, error: e1 } = await sb
+        .from("prediction_detail")
+        .select("race_date")
+        .not("finish_position", "is", null)
+        .lt("race_date", today)
+        .order("race_date", { ascending: false })
+        .limit(1);
+      if (e1 || !recent || recent.length === 0) { el.innerHTML = ""; return; }
+      var targetDate = recent[0].race_date;
+
+      var { data, error } = await sb
+        .from("prediction_detail")
+        .select("race_id, venue_name, race_number, grade, racer_id, racer_name, course, predicted_score, predicted_rank, mark, finish_position")
+        .eq("race_date", targetDate)
+        .order("race_id")
+        .order("predicted_rank");
+      if (error) throw error;
+      if (!data || data.length === 0) { el.innerHTML = ""; return; }
+
+      var groups = {};
+      for (var r of data) { if (!groups[r.race_id]) groups[r.race_id] = []; groups[r.race_id].push(r); }
+
+      var totalRaces = 0, top1Hits = 0, top3Overlap = 0, top3Total = 0;
+      var raceCards = [];
+
+      for (var raceId of Object.keys(groups).sort()) {
+        var rows = groups[raceId];
+        var hasResults = rows.some(function(r) { return r.finish_position != null; });
+        if (!hasResults) continue;
+
+        totalRaces++;
+        var sorted = rows.slice().sort(function(a, b) { return a.predicted_rank - b.predicted_rank; });
+        var predTop3 = sorted.slice(0, 3);
+        var actualTop3Set = new Set();
+        for (var r of rows) { if (r.finish_position != null && r.finish_position <= 3) actualTop3Set.add(r.course); }
+
+        var top1Row = predTop3[0];
+        var isTop1Hit = top1Row && top1Row.finish_position === 1;
+        if (isTop1Hit) top1Hits++;
+
+        var overlap = 0;
+        for (var p of predTop3) {
+          if (p.finish_position != null && p.finish_position <= 3) overlap++;
+        }
+        top3Overlap += overlap;
+        top3Total += Math.min(3, actualTop3Set.size);
+
+        var conf = sorted.length >= 3 ? sorted[0].predicted_score - sorted[2].predicted_score : 0;
+        var isHighConf = conf >= 2.3;
+
+        raceCards.push({
+          raceId: raceId,
+          venueName: rows[0].venue_name,
+          raceNumber: rows[0].race_number,
+          grade: rows[0].grade,
+          conf: conf,
+          isHighConf: isHighConf,
+          isTop1Hit: isTop1Hit,
+          overlap: overlap,
+          predTop3: predTop3
+        });
+      }
+
+      if (totalRaces === 0) { el.innerHTML = ""; return; }
+
+      var top1Pct = (top1Hits / totalRaces * 100).toFixed(1);
+      var top3Pct = top3Total > 0 ? (top3Overlap / top3Total * 100).toFixed(1) : "0.0";
+
+      var h = '<div class="yday-section">';
+      h += '<div class="section-header">';
+      h += '<div class="section-icon" style="background:linear-gradient(135deg,#0369a1,#0ea5e9)">&#128202;</div>';
+      h += '<span class="section-title">前日の結果</span>';
+      h += '<span class="section-badge">' + formatDate(targetDate) + '</span>';
+      h += '</div>';
+
+      h += '<div class="yday-summary">';
+      h += '<div class="yday-stat"><span class="yday-stat-value">' + top1Pct + '%</span><span class="yday-stat-label">&#9678;的中率</span><span class="yday-stat-sub">' + top1Hits + '/' + totalRaces + '</span></div>';
+      h += '<div class="yday-stat"><span class="yday-stat-value">' + top3Pct + '%</span><span class="yday-stat-label">Top3一致</span><span class="yday-stat-sub">' + top3Overlap + '/' + top3Total + '</span></div>';
+      h += '<div class="yday-stat"><span class="yday-stat-value">' + totalRaces + '</span><span class="yday-stat-label">レース</span></div>';
+      h += '</div>';
+
+      raceCards.sort(function(a, b) { return b.conf - a.conf; });
+      var showCards = raceCards.slice(0, 10);
+
+      for (var i = 0; i < showCards.length; i++) {
+        var rc = showCards[i];
+        var cardCls = "yday-card";
+        if (rc.isHighConf && rc.isTop1Hit) cardCls += " yday-high-hit";
+        else if (rc.isHighConf && !rc.isTop1Hit) cardCls += " yday-high-miss";
+
+        h += '<div class="' + cardCls + '" data-raceid="' + rc.raceId + '">';
+        h += '<div class="yday-card-top">';
+        h += '<span class="yday-venue">' + rc.venueName + ' ' + rc.raceNumber + 'R</span>';
+        h += gradeBadge(rc.grade);
+        h += confBadge(rc.conf);
+        if (rc.isTop1Hit) h += '<span class="yday-hit">&#9678;&#30340;&#20013;</span>';
+        else h += '<span class="yday-miss">&#9678;&#12495;&#12474;&#12524;</span>';
+        h += '</div>';
+
+        h += '<div class="yday-comparison">';
+        for (var p of rc.predTop3) {
+          var mc = markClass(p.mark);
+          var inT3 = p.finish_position != null && p.finish_position <= 3;
+          h += '<span class="yday-racer ' + (inT3 ? 'yday-in-top3' : 'yday-out-top3') + '">';
+          h += '<span class="mark ' + mc + '" style="font-size:13px">' + (p.mark || "") + '</span>';
+          h += courseCircle(p.course);
+          h += '<span class="yday-arrow">&#8594;</span>';
+          h += '<span class="yday-finish">' + (p.finish_position != null ? p.finish_position + '&#30528;' : '-') + '</span>';
+          h += '</span>';
+        }
+        h += '</div>';
+
+        h += '<div class="yday-bottom">';
+        h += '<span class="yday-top3-label">Top3: ' + rc.overlap + '/3</span>';
+        for (var d = 0; d < 3; d++) {
+          h += '<span class="yday-dot ' + (d < rc.overlap ? 'yday-dot-hit' : 'yday-dot-miss') + '"></span>';
+        }
+        h += '</div>';
+        h += '</div>';
+      }
+      h += '</div>';
+
+      el.innerHTML = h;
+      el.querySelectorAll(".yday-card").forEach(function(c) {
+        c.addEventListener("click", function() { loadRaceDetail(c.dataset.raceid); });
+      });
+    } catch (e) { el.innerHTML = ""; }
+  }
+
+  /* ── イベント ── */
+  $("#todayBtn").addEventListener("click", function() { loadVenueList(todayStr()); });
+  $("#tomorrowBtn").addEventListener("click", function() { loadVenueList(tomorrowStr()); });
+  $("#dateGoBtn").addEventListener("click", function() { var v = $("#dateInput").value; if (v) loadVenueList(v); });
+  $("#dateInput").addEventListener("keydown", function(e) { if (e.key === "Enter") { var v = $("#dateInput").value; if (v) loadVenueList(v); } });
+  $("#backBtn").addEventListener("click", function() {
+    if (S.screen === "detail") loadRaceList(S.date, S.venue);
+    else if (S.screen === "racelist") loadVenueList(S.date);
+    else if (S.screen === "venue") showScreen("date");
+  });
+
+  var scrollBtn = $("#scrollTopBtn");
+  window.addEventListener("scroll", function() {
+    scrollBtn.classList.toggle("visible", window.scrollY > 200);
+  });
+  scrollBtn.addEventListener("click", function() {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+
+  $("#dateInput").value = todayStr();
+  loadRecommendations();
+  loadYesterdayResults();
+
+  (async function loadLatestDates() {
+    const el = $("#latestInfo");
+    try {
+      const { data: dates, error } = await sb.from("races").select("date").order("date", { ascending: false }).limit(100);
+      if (error) throw error;
+      if (!dates || dates.length === 0) { el.innerHTML = '<div class="recent-label">データなし</div>'; return; }
+      const unique = [...new Set(dates.map(d => d.date))].slice(0, 5);
+      let h = '<div class="recent-label">直近の開催</div>';
+      for (const d of unique) {
+        h += '<button class="recent-btn" data-date="' + d + '">';
+        h += '<span class="date-main">' + formatDate(d) + '</span>';
+        h += '<span class="date-iso">' + d + '</span>';
+        h += '<span class="arrow">&#8250;</span>';
+        h += '</button>';
+      }
+      el.innerHTML = h;
+      el.querySelectorAll(".recent-btn").forEach(function(b) {
+        b.addEventListener("click", function() { loadVenueList(b.dataset.date); });
+      });
+    } catch (e) { el.innerHTML = ""; }
+  })();
+})();
+</script>
+</body>
+</html>

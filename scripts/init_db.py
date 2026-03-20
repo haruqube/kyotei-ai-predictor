@@ -1,8 +1,11 @@
 """DB初期化 + 過去データ一括取得"""
 
 import sys
+import warnings
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
+
+warnings.filterwarnings("ignore", category=UserWarning)
 
 from datetime import datetime
 from rich.console import Console

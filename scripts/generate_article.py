@@ -9,6 +9,7 @@ from rich.console import Console
 
 from config import RESULTS_DIR, VENUE_CODES
 from db.schema import get_connection
+from publishing.note_formatter import NoteFormatter
 
 console = Console()
 
@@ -46,6 +47,9 @@ def generate_prediction_report(target_date: str | None = None) -> str:
     lines.append(f"生成日時: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
     lines.append("")
 
+    marks = ["◎", "○", "▲", "△", "△", ""]
+    template_races = []  # Jinja2テンプレート用
+
     for race in races:
         race_id = race["race_id"]
 
@@ -74,11 +78,10 @@ def generate_prediction_report(target_date: str | None = None) -> str:
             lines.append("")
             continue
 
-        marks = ["◎", "○", "▲", "△", "△", ""]
-
         lines.append("| 印 | コース | 選手名 | 級別 | 全国勝率 | 当地勝率 | モーター | 展示T | スコア |")
         lines.append("|---|---|---|---|---|---|---|---|---|")
 
+        pred_list = []
         for i, p in enumerate(predictions):
             mark = marks[i] if i < len(marks) else ""
 
@@ -93,6 +96,18 @@ def generate_prediction_report(target_date: str | None = None) -> str:
                 f"| {p['exhibition_time'] or '?'} "
                 f"| {p['predicted_score']:.3f} |"
             )
+
+            pred_list.append({
+                "mark": mark,
+                "course": p["course"] or "?",
+                "racer_name": p["racer_name"] or p["racer_id"],
+                "class": p["class"],
+                "national_win_rate": p["national_win_rate"],
+                "local_win_rate": p["local_win_rate"],
+                "motor_2nd_rate": p["motor_2nd_rate"],
+                "exhibition_time": p["exhibition_time"],
+                "predicted_score": p["predicted_score"],
+            })
 
         lines.append("")
 
@@ -119,16 +134,46 @@ def generate_prediction_report(target_date: str | None = None) -> str:
 
         lines.append("")
 
+        template_races.append({
+            "venue_name": race["venue_name"],
+            "race_number": race["race_number"],
+            "race_name": race["race_name"],
+            "grade": race["grade"],
+            "racer_count": race["racer_count"],
+            "weather": race["weather"],
+            "wind_speed": race["wind_speed"],
+            "wave_height": race["wave_height"],
+            "predictions": pred_list,
+            "analysis": "",
+        })
+
     conn.close()
 
     report = "\n".join(lines)
 
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     date_file = dates[0].replace("-", "") if dates else datetime.now().strftime("%Y%m%d")
+
+    # 素材Markdown保存
     report_path = RESULTS_DIR / f"prediction_report_{date_file}.md"
     report_path.write_text(report, encoding="utf-8")
-
     console.print(f"[green]予測レポート保存: {report_path}[/green]")
+
+    # Jinja2テンプレートでnote.com用記事も生成
+    try:
+        formatter = NoteFormatter()
+        date_display = ", ".join(dates)
+        venue_display = " / ".join(venues)
+        article = formatter.generate_article(
+            date_display=date_display,
+            venue_display=venue_display,
+            races=template_races,
+        )
+        article_path = formatter.save_article(article, f"note_article_{date_file}.md")
+        console.print(f"[green]note.com記事保存: {article_path}[/green]")
+    except Exception as e:
+        console.print(f"[yellow]note.com記事生成スキップ: {e}[/yellow]")
+
     console.print(f'[dim]このファイルをClaude Codeに読ませて記事を生成してください。[/dim]')
 
     return str(report_path)
