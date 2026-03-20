@@ -853,6 +853,7 @@ body {
   <div id="recommendSection" class="recommend-section"></div>
   <div id="yesterdaySection"></div>
   <div class="date-nav">
+    <button class="date-btn secondary" id="yesterdayBtn">昨日</button>
     <button class="date-btn primary" id="todayBtn">今日</button>
     <button class="date-btn secondary" id="tomorrowBtn">明日</button>
   </div>
@@ -900,6 +901,10 @@ body {
 
   function todayStr() {
     const d = new Date();
+    return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+  }
+  function yesterdayStr() {
+    const d = new Date(); d.setDate(d.getDate()-1);
     return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
   }
   function tomorrowStr() {
@@ -1543,6 +1548,7 @@ body {
   }
 
   /* ── イベント ── */
+  $("#yesterdayBtn").addEventListener("click", function() { loadVenueList(yesterdayStr()); });
   $("#todayBtn").addEventListener("click", function() { loadVenueList(todayStr()); });
   $("#tomorrowBtn").addEventListener("click", function() { loadVenueList(tomorrowStr()); });
   $("#dateGoBtn").addEventListener("click", function() { var v = $("#dateInput").value; if (v) loadVenueList(v); });
