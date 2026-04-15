@@ -882,7 +882,7 @@ body {
   "use strict";
 
   const SUPABASE_URL = "https://lcdxgzprobmewotcndsc.supabase.co";
-  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxjZHhnenByb2JtZXdvdGNuZHNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwMTIyMjUsImV4cCI6MjA4OTU4ODIyNX0.HKOv9c9XHsx_dBhLewe7qQVs3db5k8r_g7en9EBM9c4";
+  const SUPABASE_ANON_KEY = "sb_publishable_w2JdVo7QJBoxbOMHD9WLbw_KnOWGyzU";
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   const $ = (s) => document.querySelector(s);
@@ -919,8 +919,8 @@ body {
 
   function gradeBadge(g) {
     if (!g) return '';
-    var cls = 'grade-' + g;
-    return '<span class="grade ' + cls + '">' + g + '</span>';
+    var safe = escapeHtml(g);
+    return '<span class="grade grade-' + safe + '">' + safe + '</span>';
   }
 
   function nightBadge(isNight) {
@@ -931,7 +931,7 @@ body {
   function courseCircle(num) {
     const n = parseInt(num) || 0;
     const cls = (n >= 1 && n <= 6) ? "course-" + n : "";
-    return '<span class="course-circle ' + cls + '">' + num + '</span>';
+    return '<span class="course-circle ' + cls + '">' + escapeHtml(num) + '</span>';
   }
 
   function markClass(m) {
@@ -974,6 +974,17 @@ body {
 
   function loadingHTML() {
     return '<div class="loading"><div class="spinner"></div><br>読み込み中...</div>';
+  }
+
+  // XSS guard: escape any string that will be interpolated into innerHTML.
+  function escapeHtml(s) {
+    if (s == null) return "";
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
   }
 
   /* ── おすすめレース ── */
@@ -1022,10 +1033,10 @@ body {
 
       for (const r of recs) {
         const confCls = r.conf >= 3.5 ? "conf-very-high" : "conf-high";
-        h += '<div class="rec-card" data-raceid="' + r.id + '">';
+        h += '<div class="rec-card" data-raceid="' + escapeHtml(r.id) + '">';
         h += '<div class="rec-top">';
-        h += '<span class="rec-time">' + (r.t || "--:--") + '</span>';
-        h += '<span class="rec-venue">' + r.v + ' ' + r.rn + 'R ' + gradeBadge(r.g) + ' ' + nightBadge(r.night) + ' ' + statusBadge(r.status) + '</span>';
+        h += '<span class="rec-time">' + escapeHtml(r.t || "--:--") + '</span>';
+        h += '<span class="rec-venue">' + escapeHtml(r.v) + ' ' + escapeHtml(r.rn) + 'R ' + gradeBadge(r.g) + ' ' + nightBadge(r.night) + ' ' + statusBadge(r.status) + '</span>';
         h += '<span class="rec-conf ' + confCls + '">' + r.conf.toFixed(2) + '</span>';
         h += '</div>';
         h += '<div class="rec-courses">';
@@ -1040,8 +1051,8 @@ body {
         }
         h += '</div>';
         h += '<div class="rec-racers">';
-        h += r.top3.map(p => (p.racer_name || "").slice(0, 3)).join(" / ");
-        if (r.top4) h += ' / ' + (r.top4.racer_name || "").slice(0, 3);
+        h += r.top3.map(p => escapeHtml((p.racer_name || "").slice(0, 3))).join(" / ");
+        if (r.top4) h += ' / ' + escapeHtml((r.top4.racer_name || "").slice(0, 3));
         h += '</div>';
         h += '<span class="rec-arrow">&#8250;</span>';
         h += '</div>';
@@ -1146,11 +1157,11 @@ body {
         const upcomingCount = statuses.filter(s => s === "upcoming").length;
         const allFinished = isToday(dateStr) && times.length > 0 && finishedCount === vr.length;
 
-        h += '<div class="venue-card' + (hasRec ? ' has-rec' : '') + '" data-venue="' + venue + '"' + (allFinished ? ' style="opacity:0.5"' : '') + '>';
-        h += '<span class="venue-name">' + venue + '</span>';
+        h += '<div class="venue-card' + (hasRec ? ' has-rec' : '') + '" data-venue="' + escapeHtml(venue) + '"' + (allFinished ? ' style="opacity:0.5"' : '') + '>';
+        h += '<span class="venue-name">' + escapeHtml(venue) + '</span>';
         h += '<div class="venue-info">';
         h += '<span class="venue-race-count">' + vr.length + 'レース' + (isNight ? ' ' + nightBadge(true) : '') + '</span>';
-        if (timeRange) h += '<span class="venue-time-range">' + timeRange + '</span>';
+        if (timeRange) h += '<span class="venue-time-range">' + escapeHtml(timeRange) + '</span>';
         if (isToday(dateStr) && times.length > 0) {
           h += '<div class="venue-status-row">';
           if (liveCount > 0) h += '<span class="venue-status-tag venue-live-tag">LIVE ' + liveCount + 'R</span>';
@@ -1173,7 +1184,7 @@ body {
         c.addEventListener("click", function() { loadRaceList(dateStr, c.dataset.venue); });
       });
     } catch (err) {
-      el.innerHTML = '<div class="error-msg">読み込みエラー: ' + err.message + '</div>';
+      el.innerHTML = '<div class="error-msg">読み込みエラー: ' + escapeHtml(err && err.message) + '</div>';
     }
   }
 
@@ -1204,7 +1215,7 @@ body {
       }
 
       let h = '<div class="racelist-header">';
-      h += '<span class="racelist-venue-name">' + venue + '</span>';
+      h += '<span class="racelist-venue-name">' + escapeHtml(venue) + '</span>';
       h += '<span class="racelist-date-label">' + formatDate(dateStr) + ' / ' + venueRaces.length + 'R</span>';
       h += '</div>';
 
@@ -1214,11 +1225,11 @@ body {
         const conf = cachedRaceConf[r.race_id];
         const status = raceStatus(r.start_time, dateStr);
         const cardCls = status === "finished" ? " is-finished" : status === "live" ? " is-live" : "";
-        h += '<div class="race-card' + cardCls + '" data-raceid="' + r.race_id + '">';
-        h += '<span class="race-num">' + r.race_number + 'R</span>';
-        h += '<span class="race-name">' + title + '</span>';
+        h += '<div class="race-card' + cardCls + '" data-raceid="' + escapeHtml(r.race_id) + '">';
+        h += '<span class="race-num">' + escapeHtml(r.race_number) + 'R</span>';
+        h += '<span class="race-name">' + escapeHtml(title) + '</span>';
         h += '<div class="race-meta">';
-        if (r.start_time) h += '<span style="font-size:11px;color:var(--sub);font-weight:600">' + r.start_time + '</span>';
+        if (r.start_time) h += '<span style="font-size:11px;color:var(--sub);font-weight:600">' + escapeHtml(r.start_time) + '</span>';
         h += statusBadge(status);
         h += gradeBadge(r.grade);
         if (has && conf != null) h += confBadge(conf);
@@ -1232,7 +1243,7 @@ body {
         c.addEventListener("click", function() { loadRaceDetail(c.dataset.raceid); });
       });
     } catch (err) {
-      el.innerHTML = '<div class="error-msg">読み込みエラー: ' + err.message + '</div>';
+      el.innerHTML = '<div class="error-msg">読み込みエラー: ' + escapeHtml(err && err.message) + '</div>';
     }
   }
 
@@ -1249,8 +1260,8 @@ body {
         const { data: ri } = await sb.from("races").select("*").eq("race_id", raceId).single();
         let h = "";
         if (ri) {
-          h += '<div class="detail-header"><div class="detail-title">' + (ri.race_name || ri.race_number + "R") + ' ' + gradeBadge(ri.grade) + '</div>';
-          h += '<div class="detail-meta"><span>' + formatDate(ri.date) + '</span><span>' + (ri.venue_name || '') + '</span></div></div>';
+          h += '<div class="detail-header"><div class="detail-title">' + escapeHtml(ri.race_name || ri.race_number + "R") + ' ' + gradeBadge(ri.grade) + '</div>';
+          h += '<div class="detail-meta"><span>' + formatDate(ri.date) + '</span><span>' + escapeHtml(ri.venue_name || '') + '</span></div></div>';
         }
         h += '<div class="empty-msg"><div class="empty-icon">&#128202;</div>このレースの予測データがありません</div>';
         el.innerHTML = h;
@@ -1260,26 +1271,26 @@ body {
       const race = data[0];
       if (!S.venue) S.venue = race.venue_name;
       if (!S.date) S.date = race.race_date;
-      $("#headerTitle").textContent = race.venue_name + " " + race.race_number + "R";
+      $("#headerTitle").textContent = (race.venue_name || "") + " " + (race.race_number || "") + "R";
 
       let h = '<div class="detail-header">';
-      h += '<div class="detail-title">' + (race.race_name || race.race_number + "R") + ' ' + gradeBadge(race.grade) + ' ' + nightBadge(race.is_night) + '</div>';
+      h += '<div class="detail-title">' + escapeHtml(race.race_name || race.race_number + "R") + ' ' + gradeBadge(race.grade) + ' ' + nightBadge(race.is_night) + '</div>';
       const detailStatus = raceStatus(race.start_time, race.race_date);
       h += '<div class="detail-meta">';
       h += '<span class="detail-meta-item">' + formatDate(race.race_date) + '</span>';
-      h += '<span class="detail-meta-item">' + race.venue_name + '</span>';
-      if (race.start_time) h += '<span class="detail-meta-item">' + race.start_time + '発走</span>';
+      h += '<span class="detail-meta-item">' + escapeHtml(race.venue_name) + '</span>';
+      if (race.start_time) h += '<span class="detail-meta-item">' + escapeHtml(race.start_time) + '発走</span>';
       h += statusBadge(detailStatus);
-      if (race.distance) h += '<span class="detail-meta-item">' + race.distance + 'm</span>';
-      if (race.racer_count) h += '<span class="detail-meta-item">' + race.racer_count + '艇</span>';
+      if (race.distance) h += '<span class="detail-meta-item">' + escapeHtml(race.distance) + 'm</span>';
+      if (race.racer_count) h += '<span class="detail-meta-item">' + escapeHtml(race.racer_count) + '艇</span>';
       h += '</div>';
 
       // 水面コンディション
       if (race.weather || race.wind_speed != null || race.wave_height != null) {
         h += '<div class="condition-row">';
-        if (race.weather) h += '<span class="condition-tag">' + race.weather + '</span>';
-        if (race.wind_speed != null) h += '<span class="condition-tag">風速 ' + race.wind_speed + 'm</span>';
-        if (race.wave_height != null) h += '<span class="condition-tag">波高 ' + race.wave_height + 'cm</span>';
+        if (race.weather) h += '<span class="condition-tag">' + escapeHtml(race.weather) + '</span>';
+        if (race.wind_speed != null) h += '<span class="condition-tag">風速 ' + escapeHtml(race.wind_speed) + 'm</span>';
+        if (race.wave_height != null) h += '<span class="condition-tag">波高 ' + escapeHtml(race.wave_height) + 'cm</span>';
         h += '</div>';
       }
       h += '</div>';
@@ -1298,10 +1309,10 @@ body {
         const isTop3 = row.predicted_rank <= 3;
         h += '<tr' + (isTop3 ? ' class="top3-row"' : '') + '>';
         h += '<td>' + (row.predicted_rank || "-") + '</td>';
-        h += '<td><span class="mark ' + mc + '">' + (row.mark || "") + '</span></td>';
+        h += '<td><span class="mark ' + mc + '">' + escapeHtml(row.mark || "") + '</span></td>';
         h += '<td>' + courseCircle(cs) + '</td>';
-        h += '<td class="racer-name-cell">' + (row.racer_name || "-") + '</td>';
-        h += '<td class="class-cell">' + (row.racer_class || "-") + '</td>';
+        h += '<td class="racer-name-cell">' + escapeHtml(row.racer_name || "-") + '</td>';
+        h += '<td class="class-cell">' + escapeHtml(row.racer_class || "-") + '</td>';
         h += '<td class="rate-cell">' + (row.national_win_rate != null ? row.national_win_rate.toFixed(2) : "-") + '</td>';
         if (hasRes) {
           const fp = row.finish_position;
@@ -1322,10 +1333,10 @@ body {
           const motorGood = row.motor_2nd_rate != null && row.motor_2nd_rate >= 40;
           h += '<tr>';
           h += '<td>' + courseCircle(cs) + '</td>';
-          h += '<td style="font-size:11px;text-align:left;padding-left:4px">' + ((row.racer_name || "").slice(0, 4)) + '</td>';
-          h += '<td style="font-size:11px">' + (row.motor_no || "-") + '</td>';
+          h += '<td style="font-size:11px;text-align:left;padding-left:4px">' + escapeHtml((row.racer_name || "").slice(0, 4)) + '</td>';
+          h += '<td style="font-size:11px">' + escapeHtml(row.motor_no || "-") + '</td>';
           h += '<td class="' + (motorGood ? 'motor-good' : '') + '" style="font-size:11px">' + (row.motor_2nd_rate != null ? row.motor_2nd_rate.toFixed(1) + '%' : '-') + '</td>';
-          h += '<td style="font-size:11px">' + (row.boat_no || "-") + '</td>';
+          h += '<td style="font-size:11px">' + escapeHtml(row.boat_no || "-") + '</td>';
           h += '<td style="font-size:11px">' + (row.boat_2nd_rate != null ? row.boat_2nd_rate.toFixed(1) + '%' : '-') + '</td>';
           h += '<td style="font-size:11px">' + (row.exhibition_time != null ? row.exhibition_time.toFixed(2) : '-') + '</td>';
           h += '<td style="font-size:11px">' + (row.start_timing != null ? row.start_timing.toFixed(2) : '-') + '</td>';
@@ -1337,7 +1348,7 @@ body {
       if (!hasRes && data.length >= 3) h += buildBetSection(data);
       el.innerHTML = h;
     } catch (err) {
-      el.innerHTML = '<div class="error-msg">読み込みエラー: ' + err.message + '</div>';
+      el.innerHTML = '<div class="error-msg">読み込みエラー: ' + escapeHtml(err && err.message) + '</div>';
     }
   }
 
@@ -1378,8 +1389,8 @@ body {
       }
       if (lvl === "low" && top[3]) tr.push({ a: top[0], b: top[2], c: top[3], tag: "大穴", cls: "tag-ouana" });
       for (const t of tr) {
-        h += '<div class="bet-row"><span class="bet-combo">' + t.a.course + ' → ' + t.b.course + ' → ' + t.c.course + '</span>';
-        h += '<span class="bet-names">' + t.a.name + '→' + t.b.name + '→' + t.c.name + '</span>';
+        h += '<div class="bet-row"><span class="bet-combo">' + escapeHtml(t.a.course) + ' → ' + escapeHtml(t.b.course) + ' → ' + escapeHtml(t.c.course) + '</span>';
+        h += '<span class="bet-names">' + escapeHtml(t.a.name) + '→' + escapeHtml(t.b.name) + '→' + escapeHtml(t.c.name) + '</span>';
         h += '<span class="bet-tag ' + t.cls + '">' + t.tag + '</span></div>';
       }
     }
@@ -1391,8 +1402,8 @@ body {
       if (top[2]) ex.push({ a: top[1], b: top[2], tag: "中穴", cls: "tag-chuuana" });
     }
     for (const e of ex) {
-      h += '<div class="bet-row"><span class="bet-combo">' + e.a.course + ' → ' + e.b.course + '</span>';
-      h += '<span class="bet-names">' + e.a.name + '→' + e.b.name + '</span>';
+      h += '<div class="bet-row"><span class="bet-combo">' + escapeHtml(e.a.course) + ' → ' + escapeHtml(e.b.course) + '</span>';
+      h += '<span class="bet-names">' + escapeHtml(e.a.name) + '→' + escapeHtml(e.b.name) + '</span>';
       h += '<span class="bet-tag ' + e.cls + '">' + e.tag + '</span></div>';
     }
 
@@ -1406,7 +1417,7 @@ body {
     for (const w of wd) {
       const lo = Math.min(w.a.course, w.b.course), hi = Math.max(w.a.course, w.b.course);
       h += '<div class="bet-row"><span class="bet-combo">' + lo + ' = ' + hi + '</span>';
-      h += '<span class="bet-names">' + w.a.name + '-' + w.b.name + '</span>';
+      h += '<span class="bet-names">' + escapeHtml(w.a.name) + '-' + escapeHtml(w.b.name) + '</span>';
       h += '<span class="bet-tag ' + w.cls + '">' + w.tag + '</span></div>';
     }
     h += '</div>';
@@ -1508,9 +1519,9 @@ body {
         if (rc.isHighConf && rc.isTop1Hit) cardCls += " yday-high-hit";
         else if (rc.isHighConf && !rc.isTop1Hit) cardCls += " yday-high-miss";
 
-        h += '<div class="' + cardCls + '" data-raceid="' + rc.raceId + '">';
+        h += '<div class="' + cardCls + '" data-raceid="' + escapeHtml(rc.raceId) + '">';
         h += '<div class="yday-card-top">';
-        h += '<span class="yday-venue">' + rc.venueName + ' ' + rc.raceNumber + 'R</span>';
+        h += '<span class="yday-venue">' + escapeHtml(rc.venueName) + ' ' + escapeHtml(rc.raceNumber) + 'R</span>';
         h += gradeBadge(rc.grade);
         h += confBadge(rc.conf);
         if (rc.isTop1Hit) h += '<span class="yday-hit">&#9678;&#30340;&#20013;</span>';
@@ -1522,7 +1533,7 @@ body {
           var mc = markClass(p.mark);
           var inT3 = p.finish_position != null && p.finish_position <= 3;
           h += '<span class="yday-racer ' + (inT3 ? 'yday-in-top3' : 'yday-out-top3') + '">';
-          h += '<span class="mark ' + mc + '" style="font-size:13px">' + (p.mark || "") + '</span>';
+          h += '<span class="mark ' + mc + '" style="font-size:13px">' + escapeHtml(p.mark || "") + '</span>';
           h += courseCircle(p.course);
           h += '<span class="yday-arrow">&#8594;</span>';
           h += '<span class="yday-finish">' + (p.finish_position != null ? p.finish_position + '&#30528;' : '-') + '</span>';
@@ -1580,9 +1591,9 @@ body {
       const unique = [...new Set(dates.map(d => d.date))].slice(0, 5);
       let h = '<div class="recent-label">直近の開催</div>';
       for (const d of unique) {
-        h += '<button class="recent-btn" data-date="' + d + '">';
+        h += '<button class="recent-btn" data-date="' + escapeHtml(d) + '">';
         h += '<span class="date-main">' + formatDate(d) + '</span>';
-        h += '<span class="date-iso">' + d + '</span>';
+        h += '<span class="date-iso">' + escapeHtml(d) + '</span>';
         h += '<span class="arrow">&#8250;</span>';
         h += '</button>';
       }
